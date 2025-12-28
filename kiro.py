@@ -1,16 +1,23 @@
+import os
+from openai import OpenAI
+
 class Agent:
     def __init__(self, context_file):
+        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         with open(context_file, 'r') as f:
             self.context = f.read()
 
     def run(self, query):
-        # Simple keyword-based response
-        query_lower = query.lower()
-        if 'food' in query_lower:
-            return "Popular street foods in Delhi include Golgappe at Chandni Chowk, Chole Bhature at Sita Ram Diwan Chand, Parathas at Paranthe Wali Gali, and Momos in Lajpat Nagar."
-        elif 'slang' in query_lower:
-            return "Local slang in Delhi: 'Bhai' is used casually, 'Scene kya hai?' means 'what is going on?', and 'Jugaad' means a smart workaround."
-        elif 'culture' in query_lower:
-            return "Delhi is the capital city of India and is famous for its street food and culture."
-        else:
-            return "I'm here to help with information about food, slang, or local culture in Delhi. Please ask something related!"
+        prompt = f"Context: {self.context}\n\nQuestion: {query}\n\nAnswer based on the context provided:"
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a helpful local guide for Delhi."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=150
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            return f"Sorry, I couldn't process your request. Error: {str(e)}"
